@@ -3,6 +3,11 @@ import argparse
 import os
 import pickle
 import logging
+from tensorflow.keras.preprocessing import image
+from keras_vggface.utils import preprocess_input
+from keras_vggface.vggface import VGGFace
+import numpy as np
+from tqdm import tqdm
 
 logging_str="[%(asctime)s:%(levelname)s: %(module)s: %(message)s]"
 log_dir='logs'
@@ -10,30 +15,16 @@ os.makedirs(log_dir,exist_ok=True)
 logging.basicConfig(filename=os.path.join(log_dir,'running_log.log'),
 level=logging.INFO, format=logging_str,filemode='a')
 
-def generate_data_pickle_file(config_path,params_path):
+def feature_extractor(config_path,params_path):
     config=read_yaml(config_path)
     params=read_yaml(params_path)
     artifacts=config['artifacts']
     artifacts_dir=artifacts['artifacts_dir']
     pickle_format_data_dir =artifacts['pickle_format_data_dir']
-    img_pickle_file_name=artifacts['img_pickle_file_name']
-    raw_local_dir_path=os.path.join(artifacts_dir,pickle_format_data_dir )
-    create_directory(dirs=[raw_local_dir_path])
-
-    pickle_file = os.path.join(raw_local_dir_path,img_pickle_file_name)
-    data_path =params['base']['data_path']
-    actors= os.listdir(data_path)
-    filenames = []
-
-    for actor in actors:
-        for file in os.listdir(os.path.join(data_path,actor)):
-            filenames.append(os.path.join(data_path,actor,file))
-
-    logging.info(f"Total actors are: {len(actors)}")
-    logging.info(f"Total actors images are: {len(filenames)}")
-
-    pickle.dump(filenames,open(pickle_file,'wb'))
-
+    img_pickle_file_name=artifacts['img_pickle_file_name']    
+    img_pickle_file_name = os.path.join(artifacts_dir,pickle_format_data_dir,img_pickle_file_name)
+    filenames = pickle.load(open(img_pickle_file_name,'rb'))
+    
 
 if __name__=="__main__":
     args=argparse.ArgumentParser()
@@ -42,8 +33,8 @@ if __name__=="__main__":
     parsed_args=args.parse_args()
 
     try:
-        logging.info(">>>>> stage_01 is started")
-        generate_data_pickle_file(config_path=parsed_args.config, params_path=parsed_args.params)
+        logging.info(">>>>> stage_02 is started")
+        feature_extractor(config_path=parsed_args.config, params_path=parsed_args.params)
         logging.info("stage_01 is completed")
     except Exception as e:
         logging.exception(e)
