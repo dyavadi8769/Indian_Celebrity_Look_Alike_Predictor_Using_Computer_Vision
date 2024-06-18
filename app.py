@@ -116,12 +116,14 @@ if uploaded_image is not None:
         features = extract_features(save_path, model, detector)
         if features is not None:
             index_pos = recommend(feature_list, features)
-            predicted_actor = " ".join(filenames[index_pos].split('/')[-1].split('_'))
+
+            file_path = filenames[index_pos]
+            predicted_actor = " ".join(os.path.basename(file_path).split('.')[0].rsplit(' ', 2)[:2])
 
             st.header('Your uploaded image')
             st.image(display_image)
 
-            st.header("Seems like " + predicted_actor)
+            st.header("You look like " + predicted_actor)
             st.image(filenames[index_pos], width=300)
         else:
             st.error("No face detected in the uploaded image.")
