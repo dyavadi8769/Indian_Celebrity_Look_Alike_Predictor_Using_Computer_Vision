@@ -1,130 +1,129 @@
-from keras_vggface.utils import preprocess_input
-from keras_vggface.vggface import VGGFace
-from src.utils.all_utils import read_yaml,create_directory
-import pickle
-from sklearn.metrics.pairwise import cosine_similarity
-import streamlit as st
-from PIL import Image
+'''
+Author: Sai Kiran Reddy Dyavadi
+Email: dyavadi324@gmail.com
+Date:18-June-2024
+'''
+
+
 import os
 import cv2
-from mtcnn import MTCNN
 import numpy as np
+import pickle
+import logging
+import streamlit as st
+from PIL import Image
+from keras_vggface.utils import preprocess_input
+from keras_vggface.vggface import VGGFace
+from mtcnn import MTCNN
+from sklearn.metrics.pairwise import cosine_similarity
+from src.utils.all_utils import read_yaml, create_directory
 
+# Set up logging
+logging.basicConfig(level=logging.INFO)
 
-config=read_yaml('config/config.yaml')
-params=read_yaml('params.yaml')
+# Load configuration
+config = read_yaml('config/config.yaml')
+params = read_yaml('params.yaml')
 
-artifacts=config['artifacts']
-artifacts_dir=artifacts['artifacts_dir']
+artifacts = config['artifacts']
+artifacts_dir = artifacts['artifacts_dir']
 
-#upload
-upload_image_dir=artifacts['upload_image_dir']
-upload_path=os.path.join(artifacts_dir,upload_image_dir)
+# Upload directory
+upload_image_dir = artifacts['upload_image_dir']
+upload_path = os.path.join(artifacts_dir, upload_image_dir)
 
-#pickle format data dir
-pickle_format_data_dir =artifacts['pickle_format_data_dir']
-img_pickle_file_name=artifacts['img_pickle_file_name']
+# Pickle file paths
+pickle_format_data_dir = artifacts['pickle_format_data_dir']
+img_pickle_file_name = artifacts['img_pickle_file_name']
 
-raw_local_dir_path=os.path.join(artifacts_dir,pickle_format_data_dir )
+raw_local_dir_path = os.path.join(artifacts_dir, pickle_format_data_dir)
+pickle_file = os.path.join(raw_local_dir_path, img_pickle_file_name)
 
-pickle_file = os.path.join(raw_local_dir_path,img_pickle_file_name)
-
-
-#feature path
-
+# Feature extraction path
 feature_extraction_dir = artifacts['feature_extraction_dir']
-extracted_features_name= artifacts['extracted_features_name']
-feature_extraction_path=os.path.join(artifacts_dir, feature_extraction_dir)
+extracted_features_name = artifacts['extracted_features_name']
+
+feature_extraction_path = os.path.join(artifacts_dir, feature_extraction_dir)
 features_name = os.path.join(feature_extraction_path, extracted_features_name)
 
+# Model parameters
 model_name = params['base']['BASE_MODEL']
-include_tops= params['base']['include_top']
-poolings= params['base']['pooling']
+include_tops = params['base']['include_top']
+input_shapes = tuple(params['base']['input_shape'])
+poolings = params['base']['pooling']
 
+# Initialize MTCNN detector and VGGFace model
 detector = MTCNN()
-model= VGGFace(model=model_name, include_top=include_tops,
-    input_shape=(224,224,3), pooling=poolings)
-filenames = pickle.load(open(pickle_file,'rb'))
-feature_list = pickle.load(open(features_name,'rb'))
+model = VGGFace(model=model_name, include_top=include_tops, input_shape=input_shapes, pooling=poolings)
+feature_list = pickle.load(open(features_name, 'rb'))
+filenames = pickle.load(open(pickle_file, 'rb'))
 
-
-#Extracted Feature
-
-def extracted_feature(img_path,model,detector):
-    img=  cv2.imread(img_path)
-    result = detector.detect_faces(img_path)
-
-    x, y, width, height = result[0]['box']
-
-    face = img[y:y + height, x:x+width]
-
-    #extract features
-
-    image=Image.fromarray(face)
-    image=image.resize((224,224))
-
-    face_array = np.asarray(image)
-    face_array= face_array.astype('float32')
-
-    expanded_img =np.expand_dims(face_array, axis=0)
-    preprocess_img = preprocess_input(expanded_img)
-    result=model.predict(preprocess_img).flatten()
-
-    return result
-
-
-
-#save upload image
-def save_upload_image(uploaded_image):
+# Save uploaded image function
+def save_uploaded_image(uploaded_image, save_path):
     try:
         create_directory(dirs=[upload_path])
-
-        with open(os.path.join(upload_path,uploaded_image.name),'wb') as f:
+        with open(save_path, 'wb') as f:
             f.write(uploaded_image.getbuffer())
-
+        logging.info(f"Image saved successfully to {save_path}")
         return True
-    except:
+    except Exception as e:
+        logging.error(f"Error saving image: {e}")
         return False
 
-
-def recommend(feature_list, features):
-    similarity = []
-    for i in range(len(feature_list)):
-        similarity.append(cosine_similarity(features.reshape(1,-1),feature_list[i].reshape(1,-1))[0][0])
+# Extract features function
+def extract_features(img_path, model, detector):
+    img = cv2.imread(img_path)
+    results = detector.detect_faces(img)
     
-    index_pos = sorted(list(enumerate(similarity)),reverse=True,key=lambda x : x[1])[0][0]
+    if results:
+        x, y, width, height = results[0]['box']
+        face = img[y:y + height, x:x + width]
+
+        image = Image.fromarray(face)
+        image = image.resize((224, 224))
+
+        face_array = np.asarray(image)
+        face_array = face_array.astype('float32')
+
+        expanded_img = np.expand_dims(face_array, axis=0)
+        preprocessed_img = preprocess_input(expanded_img)
+        result = model.predict(preprocessed_img).flatten()
+        return result
+    else:
+        logging.error("No face detected")
+        return None
+
+# Recommend image function
+def recommend(feature_list, features):
+    similarity = [cosine_similarity(features.reshape(1, -1), feature.reshape(1, -1))[0][0] for feature in feature_list]
+    index_pos = sorted(list(enumerate(similarity)), reverse=True, key=lambda x: x[1])[0][0]
     return index_pos
 
+# Streamlit UI
+st.set_option('deprecation.showfileUploaderEncoding', False)
+st.title('To whom does your face match?')
 
+uploaded_image = st.file_uploader('Choose an image')
 
+if uploaded_image is not None:
+    # Manually assign a file name to the uploaded image
+    file_name = "uploaded_image.jpg"
+    save_path = os.path.join(upload_path, file_name)
+    
+    if save_uploaded_image(uploaded_image, save_path):
+        display_image = Image.open(uploaded_image)
 
-#streamlit
-st.title("To whom does your face match")
+        features = extract_features(save_path, model, detector)
+        if features is not None:
+            index_pos = recommend(feature_list, features)
+            predicted_actor = " ".join(filenames[index_pos].split('/')[-1].split('_'))
 
-uploadimage=st.file_uploader('Choose an Image')
-
-if uploadimage is not None:
-    #save the image
-    if save_upload_image(uploadimage):
-        #loading the image
-        display_image=Image.open(uploadimage)
-
-        #extracting the features
-        features = extracted_feature(os.path.join(upload_path, uploadimage.name, model, detector))
-
-        #recommend
-        indexpos = recommend(feature_list, features)
-
-        predictor_actor = " ".join(filenames[indexpos].split('\\')[1].split('_'))
-
-        #displaying the image of actor
-        col1,col2=st.columns(2)
-
-        with col1:
-            st.header('Your Uploaded Image')
+            st.header('Your uploaded image')
             st.image(display_image)
-        
-        with col2:
-            st.header('You Seems like' + predictor_actor)
-            st.image(filenames[indexpos],width=300)
 
+            st.header("Seems like " + predicted_actor)
+            st.image(filenames[index_pos], width=300)
+        else:
+            st.error("No face detected in the uploaded image.")
+    else:
+        st.error("Error in saving the uploaded image.")
