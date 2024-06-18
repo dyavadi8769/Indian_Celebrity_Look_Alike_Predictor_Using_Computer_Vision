@@ -41,17 +41,60 @@ model_name = params['base']['BASE_MODEL']
 include_tops= params['base']['include_top']
 poolings= params['base']['pooling']
 
-#sace upload image
-def save_upload_image():
+detector = MTCNN()
+model= VGGFace(model=model_name, include_top=include_tops,
+    input_shape=(224,224,3), pooling=poolings)
+filenames = pickle.load(open(pickle_file,'rb'))
+feature_list = pickle.load(open(features_name,'rb'))
+
+
+#Extracted Feature
+
+def extracted_feature(img_path,model,detector):
+    img=  cv2.imread(img_path)
+    result = detector.detect_faces(img_path)
+
+    x, y, width, height = result[0]['box']
+
+    face = img[y:y + height, x:x+width]
+
+    #extract features
+
+    image=Image.fromarray(face)
+    image=image.resize((224,224))
+
+    face_array = np.asarray(image)
+    face_array= face_array.astype('float32')
+
+    expanded_img =np.expand_dims(face_array, axis=0)
+    preprocess_img = preprocess_input(expanded_img)
+    result=model.predict(preprocess_img).flatten()
+
+    return result
+
+
+
+#save upload image
+def save_upload_image(uploaded_image):
     try:
         create_directory(dirs=[upload_path])
 
-        with open(os.path.join(upload_path,uploadimage.name),'wb') as f:
-            f.write(uploadimage.getbuffer())
+        with open(os.path.join(upload_path,uploaded_image.name),'wb') as f:
+            f.write(uploaded_image.getbuffer())
 
         return True
     except:
         return False
+
+
+def recommend(feature_list, features):
+    similarity = []
+    for i in range(len(feature_list)):
+        similarity.append(cosine_similarity(features.reshape(1,-1),feature_list[i].reshape(1,-1))[0][0])
+    
+    index_pos = sorted(list(enumerate(similarity)),reverse=True,key=lambda x : x[1])[0][0]
+    return index_pos
+
 
 
 
@@ -65,3 +108,23 @@ if uploadimage is not None:
     if save_upload_image(uploadimage):
         #loading the image
         display_image=Image.open(uploadimage)
+
+        #extracting the features
+        features = extracted_feature(os.path.join(upload_path, uploadimage.name, model, detector))
+
+        #recommend
+        indexpos = recommend(feature_list, features)
+
+        predictor_actor = " ".join(filenames[indexpos].split('\\')[1].split('_'))
+
+        #displaying the image of actor
+        col1,col2=st.columns(2)
+
+        with col1:
+            st.header('Your Uploaded Image')
+            st.image(display_image)
+        
+        with col2:
+            st.header('You Seems like' + predictor_actor)
+            st.image(filenames[indexpos],width=300)
+
