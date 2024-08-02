@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 # Indian-Celebrity-Look-Alike-Predictor-Using-VGGFace
 
 A Deep learning based streamlit web app which can tell with which Indian bollywood celebrity your face resembles.
@@ -72,4 +73,6 @@ Role  : Data Scientist
 Email : dyavadi324@gmail.com
 ```
 
+=======
+>>>>>>> d581259a28ce6c35fc66edd6397ee6470117cb02
 
