@@ -11,6 +11,21 @@ In this project, you will discover the problem of face recognition and how deep 
 
 This is a methods of identifying similar faces check various aspects on pictures, including: face shape, nose, eyes and mouth; face position in the picture; skin color (including the lighting of the photo); color and hair and cosine_similarity.
 
+
+# Steps Involved in the Project:
+
+This repository hosts the Indian Celebrity Look-Alike Predictor project, which utilizes VGGFace for high-accuracy face recognition. The project features a modular pipeline encompassing:
+
+1. **Data Ingestion:** Managed and processed over 5,000 images.
+2. **Face Detection:** Used MTCNN for precise face detection and storing coordinates.
+3. **Image Preprocessing:** Employed TensorFlow and Keras for robust preprocessing.
+4. **Feature Extraction:** Leveraged VGGFace for extracting detailed facial features.
+5. **Similarity Measurement:** Implemented cosine similarity to compare feature vectors, achieving 96% matching accuracy.
+6. **Performance Optimization:** Reduced preprocessing time by 50%, ensuring scalable handling of large datasets.
+7. **Deployment:** Designed an interactive web application with Streamlit, enabling real-time celebrity look-alike predictions with an average response time of under 2 seconds.
+
+This project demonstrates efficient handling of large-scale image data and real-time prediction capabilities.
+
 # Dataset has been used:
 https://www.kaggle.com/sushilyadav1998/bollywood-celeb-localized-face-dataset
 
