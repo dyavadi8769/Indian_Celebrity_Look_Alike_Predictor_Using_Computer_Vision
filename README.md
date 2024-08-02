@@ -42,7 +42,7 @@ This really performing good you can consider by seeing this result 😀
 
 2.  **Create a virtual environment and activate it:**
     ```bash
-    conda create -p env python==3.11 -y
+    conda create -p env python==3.7 -y
     conda activate env/ 
 
 3.  **Install the Required Dependecies:**
