@@ -53,7 +53,7 @@ This really performing good you can consider by seeing this result 😀
 1. **Clone the repository:**
    ```bash
    git clone https://github.com/dyavadi8769/Indian-Celebrity-Look-Alike-Predictor-Using-VGGFace
-   cd ipl-innings-score-predictor
+   cd Indian-Celebrity-Look-Alike-Predictor-Using-VGGFace
 
 2.  **Create a virtual environment and activate it:**
     ```bash
